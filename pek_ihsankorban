@@ -1,0 +1,103 @@
+(function() {
+    function runUltimateFix() {
+        var targetInput = document.querySelector('input[value="24"]');
+        if (!targetInput) return;
+
+        var row = targetInput.closest('tr');
+        var select = row ? row.querySelector('select.quantity') : null;
+        if (!select || document.getElementById('custom-bump-container')) return;
+
+        var imgSrc = row.querySelector('img') ? row.querySelector('img').src : '';
+        row.style.setProperty('display', 'none', 'important');
+
+        var bumpHTML = `
+        <div id="custom-bump-container" style="border: 2px dashed #ff4500; padding: 20px; background: #fffaf0; border-radius: 12px; margin: 20px 0; cursor: pointer; font-family: sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.08); display: block !important;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
+                <div style="display: flex; align-items: flex-start; flex: 1; min-width: 280px;">
+                    <input type="checkbox" id="bump-checkbox" style="width: 25px; height: 25px; margin-right: 15px; cursor: pointer; margin-top: 5px;">
+                    <img src="${imgSrc}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; margin-right: 15px; border: 1px solid #ddd;">
+                    <div style="flex: 1;">
+                        <strong style="color: #d32f2f; font-size: 17px; display: block; margin-bottom: 8px;">&#128293; Tawaran Khas: Tambah Pek Ihsan Korban</strong>
+                        <div style="font-size: 13px; color: #444; line-height: 1.6;">
+                            <p style="margin: 0 0 8px 0; font-weight: bold; color: #333;">Lengkapkan agihan daging korban dengan bantuan makanan asas:</p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 12px;">
+                                <span>&#127834; Beras</span>
+                                <span>&#128738; Minyak masak</span>
+                                <span>&#129462; Garam & rempah</span>
+                                <span>&#127838; Tepung / Gula</span>
+                                <span>&#129380; Air minuman</span>
+                            </div>
+                            <p style="margin: 10px 0 5px 0; font-weight: bold; color: #d32f2f;">&#9989; Kenapa Tambah Pek Korban?</p>
+                            <div style="margin: 0; padding-left: 5px;">
+                                <div>&#10004; Memberi lebih manfaat kepada penerima korban</div>
+                                <div>&#10004; Mudahkan mereka sediakan juadah lengkap</div>
+                                <div>&#10004; Gandakan nilai sedekah anda</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; padding-top: 5px;">
+                    <div id="bump-qty-area" style="display: none; align-items: center; background: #fff; border: 2px solid #ff4500; border-radius: 8px; padding: 5px; margin-bottom: 10px;">
+                        <button type="button" id="btn-minus" style="background:none; border:none; font-weight:bold; color:#ff4500; padding:0 10px; font-size:24px; cursor:pointer; line-height:1;">&minus;</button>
+                        <span id="bump-qty-val" style="font-weight:bold; padding:0 5px; min-width:20px; text-align:center; color:#333; font-size:18px;">1</span>
+                        <button type="button" id="btn-plus" style="background:none; border:none; font-weight:bold; color:#ff4500; padding:0 10px; font-size:24px; cursor:pointer; line-height:1;">&plus;</button>
+                    </div>
+                    <div style="font-weight: bold; color: #d32f2f; font-size: 20px;">&plus;RM50</div>
+                </div>
+            </div>
+            <div id="bump-subtotal-msg" style="text-align: right; margin-top: 15px; font-weight: bold; color: #d32f2f; display: none; font-size: 16px; border-top: 1px solid #ffccbc; padding-top: 10px;">
+                Sedekah Tambahan: RM<span id="bump-total-val">50.00</span>
+            </div>
+        </div>
+        `;
+
+        var table = document.querySelector('.table-responsive') || document.querySelector('table');
+        if (table) table.insertAdjacentHTML('afterend', bumpHTML);
+
+        var checkbox = document.getElementById('bump-checkbox');
+        var qtyArea = document.getElementById('bump-qty-area');
+        var qtyVal = document.getElementById('bump-qty-val');
+        var totalMsg = document.getElementById('bump-subtotal-msg');
+        var totalVal = document.getElementById('bump-total-val');
+        var container = document.getElementById('custom-bump-container');
+        var currentQty = 0;
+
+        function syncAndCalculate(qty) {
+            currentQty = qty;
+            select.value = qty;
+            if (qty > 0) {
+                checkbox.checked = true;
+                qtyArea.style.display = 'flex';
+                totalMsg.style.display = 'block';
+                qtyVal.innerText = qty;
+                totalVal.innerText = (qty * 50).toFixed(2);
+                container.style.background = "#ffe4d1";
+            } else {
+                checkbox.checked = false;
+                qtyArea.style.display = 'none';
+                totalMsg.style.display = 'none';
+                container.style.background = "#fffaf0";
+            }
+            var evt = document.createEvent("HTMLEvents");
+            evt.initEvent("change", true, true);
+            select.dispatchEvent(evt);
+            if (window.jQuery) {
+                var $s = window.jQuery(select);
+                $s.val(qty).trigger('change').trigger('input').trigger('blur');
+                if (typeof window.calculate_total === 'function') window.calculate_total();
+                if (typeof window.update_total === 'function') window.update_total();
+            }
+        }
+
+        container.onclick = function(e) {
+            var forbidden = ['btn-plus', 'btn-minus', 'bump-checkbox'];
+            if (!forbidden.includes(e.target.id)) {
+                syncAndCalculate(currentQty === 0 ? 1 : 0);
+            }
+        };
+        checkbox.onchange = function() { syncAndCalculate(this.checked ? 1 : 0); };
+        document.getElementById('btn-plus').onclick = function(e) { e.stopPropagation(); syncAndCalculate(currentQty + 1); };
+        document.getElementById('btn-minus').onclick = function(e) { e.stopPropagation(); if(currentQty > 0) syncAndCalculate(currentQty - 1); };
+    }
+    setTimeout(runUltimateFix, 1500);
+})();
